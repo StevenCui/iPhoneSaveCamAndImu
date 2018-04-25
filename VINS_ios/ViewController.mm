@@ -245,6 +245,8 @@ NSString *filePath;
     [saveData setName:@"saveData"];
     [saveData start];
     [self imuStartUpdate];
+    frameSize = cv::Size(videoCamera.imageWidth,videoCamera.imageHeight);
+    NSLog(@"frameSize: %d %d",frameSize.width,frameSize.height);
 }
 
 /*
@@ -280,6 +282,11 @@ UIImage *lateast_image;
         imgData.header = img_msg->header;
         Mat imgSave;
         cvtColor(image, imgSave, CV_BGRA2RGB);
+        bool isNeedRotation = image.size() != frameSize;
+        if(isNeedRotation) {
+            NSLog(@"need to rotate the image!");
+            imgSave = imgSave.t();
+        }
         imgData.image = MatToUIImage(imgSave);
         imgDataBuf.push(imgData);
         NSLog(@"camera image timestamp : %f img size: %d %d imgDataBuf size is %d",time_stamp, imgSave.cols,imgSave.rows, static_cast<int>(imgDataBuf.size()));
@@ -452,7 +459,7 @@ vector<IMU_MSG> gyro_buf;  // for Interpolation
                 IMG_DATA tmp_data;
                 tmp_data = imgDataBuf.front();
                 imgDataBuf.pop();
-                [self recordImageTime:tmp_data];
+                //[self recordImageTime:tmp_data];
                 [self recordImage:tmp_data];
                 imageDataIndex++;
                 NSLog(@"save camera image: %lf %lu",tmp_data.header,imageDataIndex);
@@ -545,8 +552,8 @@ vector<IMU_MSG> gyro_buf;  // for Interpolation
     NSString *documentsPath = [[paths objectAtIndex:0] stringByAppendingPathComponent:@"IMAGE"];; //Get the docs directory
     
     [self checkDirectoryPath:imageDataIndex withObject:documentsPath];
-    
-    NSString *filename = [NSString stringWithFormat:@"%lu", imageDataIndex];
+    unsigned long time = (unsigned long)(image_data.header * 1e9);
+    NSString *filename = [NSString stringWithFormat:@"%lu", time];
     NSString *filePath = [documentsPath stringByAppendingPathComponent:filename]; //Add the file name
     
     [msgData writeToFile:filePath atomically:YES];
